@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ProgressBar } from "./progress-bar";
 import { CompletenessMeter } from "./completeness-meter";
 import { FeatureCard } from "./feature-card";
@@ -14,6 +15,7 @@ export type ProjectBrief = {
   budget_signals: string | null;
   industry: string | null;
   status: string;
+  share_id?: string | null;
 };
 
 function InfoField({ label, value }: { label: string; value: string }) {
@@ -24,6 +26,27 @@ function InfoField({ label, value }: { label: string; value: string }) {
       </p>
       <p className="text-sm leading-relaxed">{value}</p>
     </div>
+  );
+}
+
+function ShareLinkButton({ shareId }: { shareId: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    const url = `${window.location.origin}/brief/${shareId}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="w-full rounded-lg border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm font-semibold text-accent-light transition hover:border-accent hover:bg-accent/20"
+    >
+      {copied ? "Link Copied!" : "Copy Shareable Link"}
+    </button>
   );
 }
 
@@ -126,7 +149,9 @@ export function PlanPanel({
         </div>
       </div>
 
-      <div className="border-t border-border p-4">
+      <div className="space-y-2 border-t border-border p-4">
+        {brief.share_id && <ShareLinkButton shareId={brief.share_id} />}
+
         {shared ? (
           <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2.5 text-center text-sm text-green-400">
             Plan shared — Kevin will be in touch

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 
 export async function POST(request: Request) {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     supabase
       .from("project_briefs")
       .select(
-        "summary, goals, features, target_audience, tech_preferences, timeline, budget_signals, industry, status",
+        "summary, goals, features, target_audience, tech_preferences, timeline, budget_signals, industry, status, share_id",
       )
       .eq("session_id", session.id)
       .maybeSingle(),
@@ -62,6 +62,76 @@ export async function POST(request: Request) {
     messages: messagesResult.data || [],
     brief: briefResult.data,
   });
+}
+
+async function sendNotification(
+  visitorEmail: string,
+  brief: {
+    summary: string | null;
+    goals: string[];
+    features: string[];
+    target_audience: string | null;
+    industry: string | null;
+    timeline: string | null;
+    share_id: string | null;
+  },
+) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const notifyTo = process.env.NOTIFICATION_EMAIL;
+  if (!resendKey || !notifyTo) return;
+
+  const briefUrl = brief.share_id
+    ? `https://kevinolson.ai/brief/${brief.share_id}`
+    : null;
+
+  const goalsList = brief.goals.length
+    ? brief.goals.map((g) => `  - ${g}`).join("\n")
+    : "  (none yet)";
+  const featuresList = brief.features.length
+    ? brief.features.map((f) => `  - ${f}`).join("\n")
+    : "  (none yet)";
+
+  const details = [
+    brief.target_audience && `Audience: ${brief.target_audience}`,
+    brief.industry && `Industry: ${brief.industry}`,
+    brief.timeline && `Timeline: ${brief.timeline}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const text = [
+    `New project plan shared on kevinolson.ai`,
+    ``,
+    `From: ${visitorEmail}`,
+    briefUrl && `Brief: ${briefUrl}`,
+    ``,
+    `Summary: ${brief.summary || "(no summary yet)"}`,
+    ``,
+    `Goals:\n${goalsList}`,
+    ``,
+    `Features:\n${featuresList}`,
+    details && `\n${details}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${resendKey}`,
+      },
+      body: JSON.stringify({
+        from: "AI Project Planner <planner@kevinolson.ai>",
+        to: notifyTo,
+        subject: `New Plan: ${brief.summary?.slice(0, 60) || "Untitled Project"}`,
+        text,
+      }),
+    });
+  } catch {
+    // Notification is best-effort
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -110,6 +180,20 @@ export async function PATCH(request: Request) {
       { error: sessionResult.error.message },
       { status: 500 },
     );
+  }
+
+  if (body.email) {
+    const { data: briefData } = await supabase
+      .from("project_briefs")
+      .select("summary, goals, features, target_audience, industry, timeline, share_id")
+      .eq("session_id", body.session_id)
+      .maybeSingle();
+
+    if (briefData) {
+      after(async () => {
+        await sendNotification(body.email!, briefData);
+      });
+    }
   }
 
   return NextResponse.json({ success: true });

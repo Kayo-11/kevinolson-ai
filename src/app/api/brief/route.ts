@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const { data: brief } = await supabase
     .from("project_briefs")
     .select(
-      "summary, goals, features, target_audience, tech_preferences, timeline, budget_signals, industry, status",
+      "summary, goals, features, target_audience, tech_preferences, timeline, budget_signals, industry, status, share_id",
     )
     .eq("session_id", sessionId)
     .maybeSingle();
