@@ -30,6 +30,8 @@ Use the release script to commit, push, deploy to Vercel production, and run smo
 npm run release -- "chore: release <what changed>"
 ```
 
+By default, pass/fail smoke tests run against canonical production domain `https://kevinolson.ai`. A `www` check is also run as a non-blocking warning.
+
 Checklist and auth/env prerequisites:
 
 - `docs/RELEASE_CHECKLIST.md`

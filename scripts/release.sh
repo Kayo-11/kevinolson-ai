@@ -10,6 +10,8 @@ REQUIRED_VERCEL_ENV_VARS=(
 )
 
 COMMIT_MESSAGE="${1:-chore: release $(date +"%Y-%m-%d %H:%M:%S")}"
+CANONICAL_DOMAIN="${CANONICAL_DOMAIN:-kevinolson.ai}"
+WWW_DOMAIN="${WWW_DOMAIN:-www.kevinolson.ai}"
 
 print_step() {
   printf "\n==> %s\n" "$1"
@@ -79,21 +81,38 @@ deploy_prod() {
 }
 
 smoke_test() {
-  local deploy_url="$1"
+  local base_url="$1"
   local home_status
   local chat_status
 
-  home_status="$(curl -sS -o /dev/null -w "%{http_code}" "$deploy_url")"
+  home_status="$(curl -sS -o /dev/null -w "%{http_code}" "$base_url")"
   if [[ "$home_status" != "200" ]]; then
-    echo "Smoke test failed: $deploy_url returned HTTP $home_status" >&2
+    echo "Smoke test failed: $base_url returned HTTP $home_status" >&2
     exit 1
   fi
 
-  chat_status="$(curl -sS -o /dev/null -w "%{http_code}" "$deploy_url/api/chat")"
+  chat_status="$(curl -sS -o /dev/null -w "%{http_code}" "$base_url/api/chat")"
   if [[ "$chat_status" != "405" ]]; then
-    echo "Smoke test failed: $deploy_url/api/chat expected HTTP 405, got $chat_status" >&2
+    echo "Smoke test failed: $base_url/api/chat expected HTTP 405, got $chat_status" >&2
     exit 1
   fi
+}
+
+check_www_health() {
+  local www_url="https://${WWW_DOMAIN}"
+  local www_status
+
+  if ! www_status="$(curl -sS -o /dev/null -w "%{http_code}" "$www_url")"; then
+    echo "Warning: could not validate ${www_url} (DNS/TLS may still be propagating)." >&2
+    return
+  fi
+
+  if [[ "$www_status" == "200" || "$www_status" == "301" || "$www_status" == "302" || "$www_status" == "307" || "$www_status" == "308" ]]; then
+    echo "WWW health check ok: ${www_url} returned HTTP ${www_status}"
+    return
+  fi
+
+  echo "Warning: ${www_url} returned HTTP ${www_status}. Canonical release checks still passed." >&2
 }
 
 print_step "Preflight checks (CLI + auth + env)"
@@ -115,8 +134,10 @@ DEPLOY_URL="$(deploy_prod)"
 echo "Deployed URL: $DEPLOY_URL"
 
 print_step "Smoke tests"
-smoke_test "$DEPLOY_URL"
+CANONICAL_URL="https://${CANONICAL_DOMAIN}"
+smoke_test "$CANONICAL_URL"
+check_www_health
 echo "Smoke tests passed."
 
 print_step "Release complete"
-echo "Production deployment is healthy: $DEPLOY_URL"
+echo "Production deployment is healthy: $CANONICAL_URL"

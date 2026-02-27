@@ -38,9 +38,15 @@ Optional but recommended:
 3. Commits all local changes with your message.
 4. Pushes `HEAD` to `origin`.
 5. Deploys production via `vercel deploy --prod --yes`.
-6. Smoke-tests deployed URL:
+6. Smoke-tests canonical production domain (`https://kevinolson.ai` by default):
    - `GET /` returns `200`
    - `GET /api/chat` returns `405` (route exists and method guard is active)
+7. Performs a non-blocking health check on `https://www.kevinolson.ai` and prints a warning if DNS/TLS is not ready.
+
+You can override defaults when needed:
+
+- `CANONICAL_DOMAIN=example.com npm run release -- "chore: release"`
+- `WWW_DOMAIN=www.example.com npm run release -- "chore: release"`
 
 ## Usage
 
