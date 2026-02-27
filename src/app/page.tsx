@@ -6,6 +6,7 @@ import { Process } from "@/components/process";
 import { About } from "@/components/about";
 import { CTA } from "@/components/cta";
 import { Footer } from "@/components/footer";
+import { Chatbot } from "@/components/chatbot";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <About />
       <CTA />
       <Footer />
+      <Chatbot />
     </main>
   );
 }
