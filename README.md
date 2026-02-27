@@ -35,6 +35,7 @@ By default, pass/fail smoke tests run against canonical production domain `https
 Checklist and auth/env prerequisites:
 
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/BRANCHING_WORKFLOW.md`
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
